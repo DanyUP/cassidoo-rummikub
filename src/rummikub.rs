@@ -1,6 +1,7 @@
 use core::fmt;
 use rand::prelude::*;
 use iter_tools::Itertools;
+use std::cmp;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub enum Color {
@@ -38,6 +39,10 @@ impl Card {
             Card::Numbered { number: _, color } => Some(color),
             Card::Wildcard => None
         }
+    }
+
+    fn is_wildcard(&self) -> bool {
+        *self == Card::Wildcard
     }
 }
 
@@ -101,28 +106,62 @@ impl Deck {
     }
 }
 
+fn get_wildcards(cards: &[Card]) -> Vec<&Card> {
+    cards.iter()
+        .filter(|c| c.is_wildcard())
+        .collect()
+}
+
+fn create_permutations<'a>(set: &[&'a Card]) -> Vec<Vec<&'a Card>> {
+    let mut permutations = vec![];
+    if set.len() <= 4 {
+        permutations.push(set.to_owned());
+    }
+    if set.len() > 3 {
+        for remove_idx in 0..set.len() {
+            let mut subset = set.to_owned();
+            subset.remove(remove_idx);
+            let mut subpermutations = create_permutations(&subset);
+            permutations.append(&mut subpermutations);
+        }
+    }
+    permutations
+}
 
 fn find_runs(cards: &[Card]) -> Vec<Vec<&Card>> {
     Vec::new()
 }
 
 fn find_same_numbers(cards: &[Card]) -> Vec<Vec<&Card>> {
+    // Count the number of wildcards
+    let wildcards = get_wildcards(cards);
+
     // Sort the cards by number and color (with Wildcards at the end)
     let mut sorted_cards: Vec<&Card> = cards.iter().collect();
     sorted_cards.sort();
 
     let mut sets: Vec<Vec<&Card>> = vec![];
-    // Group cards by their number
-    for (_, cards) in &sorted_cards.into_iter().group_by(|c| c.number()) {
+    // Group cards (excluding wildcards) by their number
+    let grouped_cards = sorted_cards.into_iter()
+        .filter(|c| !c.is_wildcard())
+        .group_by(|c| c.number());
+
+    for (_, cards) in &grouped_cards {
         // Exclude cards with duplicated color
-        let cards: Vec<&Card> = cards.unique_by(|c| c.color()).collect();
-        // Take only groups with 3 cards or more
-        if cards.len() >= 3 {
-            sets.push(cards)
+        let mut cards: Vec<&Card> = cards.unique_by(|c| c.color()).collect();
+        // Take only groups with 3 cards or more (even with the help of wildcards)
+        if cards.len() + wildcards.len() >= 3 {
+            // Add wildcards to the set
+            for wildcard in &wildcards {
+                cards.push(wildcard)
+            }
+
+            // Compute permutation
+            // The group of cards + wildcards can be > 4, since create_permutations excludes blocks bigger than 4
+            let mut permutations = create_permutations(&cards);
+            sets.append(&mut permutations)
         }
 
-        // TODO: manage Wildcards
-        // TODO: try every permutation
     }
     sets
 }
