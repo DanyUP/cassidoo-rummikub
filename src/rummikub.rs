@@ -76,19 +76,15 @@ impl Deck {
         Deck { cards }
     }
 
-    pub fn new_shuffled(rounds: i32) -> Deck {
+    pub fn new_shuffled() -> Deck {
         let mut deck = Deck::new();
-        deck.shuffle(rounds);
+        deck.shuffle();
         deck
     }
 
-    pub fn shuffle(&mut self, rounds: i32) {
+    pub fn shuffle(&mut self) {
         let mut rng = rand::thread_rng();
-        for _ in 0..rounds {
-            let idx_1 = rng.gen_range(0..self.cards.len());
-            let idx_2 = rng.gen_range(0..self.cards.len());
-            self.cards.swap(idx_1, idx_2);
-        }
+        self.cards.shuffle(&mut rng);
     }
 
     pub fn pick_card(&mut self) -> Option<Card> {

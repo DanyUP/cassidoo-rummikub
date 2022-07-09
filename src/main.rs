@@ -3,7 +3,7 @@ mod rummikub;
 use rummikub::{Deck, valid_sets};
 
 fn main() {
-    let mut deck = Deck::new_shuffled(400);
+    let mut deck = Deck::new_shuffled();
     let mut tray = deck.pick_tray(14);
 
     println!("Your tray:");
