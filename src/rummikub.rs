@@ -1,4 +1,5 @@
 use core::fmt;
+use std::collections::{BTreeMap, BTreeSet};
 use rand::prelude::*;
 use iter_tools::Itertools;
 
@@ -158,32 +159,34 @@ fn find_runs(cards: &[Card]) -> Vec<Vec<&Card>> {
     let wildcards = get_wildcards(cards);
 
     // Sort the cards by number and color (with Wildcards at the end)
-    let mut sorted_cards: Vec<&Card> = cards.iter().collect();
-    sorted_cards.sort();
+    //let mut sorted_cards: Vec<&Card> = cards.iter().collect();
+    //sorted_cards.sort();
 
     let mut sets: Vec<Vec<&Card>> = vec![];
     // Group cards (excluding wildcards) by their color
-    let grouped_cards = sorted_cards.into_iter()
-        .filter(|c| !c.is_wildcard())
-        .group_by(|c| c.color());
-
-        for (_, cards) in &grouped_cards {
-            // Exclude cards with duplicated number
-            let cards: Vec<&Card> = cards.unique_by(|c| c.number()).collect();
-            // Take only groups with 3 cards or more (even with the help of wildcards)
-            if cards.len() + wildcards.len() >= 3 {
-                let mut all_nums_set: Vec<Option<&Card>> = Vec::with_capacity(13);
-                for num in 1..=13 {
-                    let available_card = cards.iter().find(|c| c.number() == Some(&num)).cloned();
-                    all_nums_set.push(available_card);
-                }
-                println!("{:?}", all_nums_set);
-
-                let mut run_windows = create_run_windows(&all_nums_set, &wildcards);
-                sets.append(&mut run_windows);
-            }
-    
+    let mut grouped_cards: BTreeMap<Color, BTreeSet<&Card>> = BTreeMap::new();
+    for c in cards {
+        if let Card::Numbered { number: _, color } = c {
+            grouped_cards.entry(*color).or_default().insert(c);
         }
+        
+    }
+
+    for cards in grouped_cards.values() {
+        // Take only groups with 3 cards or more (even with the help of wildcards)
+        if cards.len() + wildcards.len() >= 3 {
+            let mut all_nums_set: Vec<Option<&Card>> = Vec::with_capacity(13);
+            for num in 1..=13 {
+                let available_card = cards.iter().find(|c| c.number() == Some(&num)).cloned();
+                all_nums_set.push(available_card);
+            }
+            println!("{:?}", all_nums_set);
+
+            let mut run_windows = create_run_windows(&all_nums_set, &wildcards);
+            sets.append(&mut run_windows);
+        }
+
+    }
     sets
 }
 
