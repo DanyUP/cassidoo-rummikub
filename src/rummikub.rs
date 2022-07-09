@@ -180,7 +180,7 @@ fn find_runs(cards: &[Card]) -> Vec<Vec<&Card>> {
                 let available_card = cards.iter().find(|c| c.number() == Some(&num)).cloned();
                 all_nums_set.push(available_card);
             }
-            println!("{:?}", all_nums_set);
+            //println!("{:?}", all_nums_set);
 
             let mut run_windows = create_run_windows(&all_nums_set, &wildcards);
             sets.append(&mut run_windows);
