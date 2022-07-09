@@ -2,6 +2,21 @@ This is my solution in Rust for Cassidoo interview question from https://buttond
 
 Examples of output:
 
+    Your tray:
+    - 3 Yellow
+    - 1 Blue
+    - 4 Blue
+    - 3 Blue
+    - 1 Yellow
+    - 7 Yellow
+    - 13 Yellow
+    - 1 Yellow
+    - 5 Black
+    - 10 Yellow
+    - 4 Blue
+    - 3 Black
+    - 1 Black
+    - Wildcard
     Your tray (sorted):
     - 1 Blue
     - 1 Black
