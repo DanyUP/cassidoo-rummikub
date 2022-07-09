@@ -1,7 +1,6 @@
 use core::fmt;
 use rand::prelude::*;
 use iter_tools::Itertools;
-use std::cmp;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub enum Color {
@@ -17,7 +16,7 @@ impl fmt::Display for Color {
     }
 }
 
-#[derive(Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub enum Card {
     Numbered {
         number: i8,
@@ -128,12 +127,67 @@ fn create_permutations<'a>(set: &[&'a Card]) -> Vec<Vec<&'a Card>> {
     permutations
 }
 
+fn create_run_windows<'a>(set: &[Option<&'a Card>], wildcards: &[&'a Card]) -> Vec<Vec<&'a Card>> {
+    let mut found_windows = vec![];
+    for window_length in (3..=set.len()).rev() {
+        // println!("Trying window of length {}", window_length);
+        for start_idx in 0..=set.len()-window_length {
+            //println!("Checking subset from {} to {}", start_idx, window_length+start_idx);
+            let subwindow = &set[start_idx..window_length+start_idx];
+            let missing_cards = subwindow.iter()
+                .filter(|c| c.is_none())
+                .count();
+            if missing_cards <= wildcards.len() {
+                let mut tmp_wildcards = wildcards.to_owned();
+                let run: Vec<&Card> = subwindow.iter()
+                    .map(|c| match c {
+                        Some(card) => *card,
+                        None => tmp_wildcards.pop().unwrap()
+                    })
+                    .collect();
+                //println!("Found run: {:?}", run);
+                found_windows.push(run);
+            }
+        }
+        
+    }
+    found_windows
+}
+
 fn find_runs(cards: &[Card]) -> Vec<Vec<&Card>> {
-    Vec::new()
+    let wildcards = get_wildcards(cards);
+
+    // Sort the cards by number and color (with Wildcards at the end)
+    let mut sorted_cards: Vec<&Card> = cards.iter().collect();
+    sorted_cards.sort();
+
+    let mut sets: Vec<Vec<&Card>> = vec![];
+    // Group cards (excluding wildcards) by their color
+    let grouped_cards = sorted_cards.into_iter()
+        .filter(|c| !c.is_wildcard())
+        .group_by(|c| c.color());
+
+        for (_, cards) in &grouped_cards {
+            // Exclude cards with duplicated number
+            let cards: Vec<&Card> = cards.unique_by(|c| c.number()).collect();
+            // Take only groups with 3 cards or more (even with the help of wildcards)
+            if cards.len() + wildcards.len() >= 3 {
+                let mut all_nums_set: Vec<Option<&Card>> = Vec::with_capacity(13);
+                for num in 1..=13 {
+                    let available_card = cards.iter().find(|c| c.number() == Some(&num)).cloned();
+                    all_nums_set.push(available_card);
+                }
+                println!("{:?}", all_nums_set);
+
+                let mut run_windows = create_run_windows(&all_nums_set, &wildcards);
+                sets.append(&mut run_windows);
+            }
+    
+        }
+    sets
 }
 
 fn find_same_numbers(cards: &[Card]) -> Vec<Vec<&Card>> {
-    // Count the number of wildcards
     let wildcards = get_wildcards(cards);
 
     // Sort the cards by number and color (with Wildcards at the end)
