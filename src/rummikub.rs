@@ -27,6 +27,10 @@ pub enum Card {
 }
 
 impl Card {
+    fn new(number: i8, color: Color) -> Card {
+        Card::Numbered { number, color }
+    }
+
     fn number(&self) -> Option<&i8> {
         match self {
             Card::Numbered { number, color: _ } => Some(number),
@@ -68,7 +72,7 @@ impl Deck {
             // Two sets of cards
             for c in [Color::Red, Color::Blue, Color::Black, Color::Yellow] {
                 for num in 1..=13 {
-                    cards.push(Card::Numbered{ number: num, color: c })
+                    cards.push(Card::new(num, c));
                 }
             }
             cards.push(Card::Wildcard);
@@ -108,10 +112,10 @@ fn get_wildcards(cards: &[Card]) -> Vec<&Card> {
         .collect()
 }
 
-fn create_permutations<'a>(set: &[&'a Card]) -> Vec<Vec<&'a Card>> {
-    let mut permutations = vec![];
+fn create_permutations<'a>(set: &[&'a Card]) -> BTreeSet<Vec<&'a Card>> {
+    let mut permutations = BTreeSet::new();
     if set.len() <= 4 {
-        permutations.push(set.to_owned());
+        permutations.insert(set.to_owned());
     }
     if set.len() > 3 {
         for remove_idx in 0..set.len() {
@@ -193,7 +197,7 @@ fn find_same_numbers(cards: &[Card]) -> Vec<Vec<&Card>> {
     let mut sorted_cards: Vec<&Card> = cards.iter().collect();
     sorted_cards.sort();
 
-    let mut sets: Vec<Vec<&Card>> = vec![];
+    let mut sets: BTreeSet<Vec<&Card>> = BTreeSet::new();
     // Group cards (excluding wildcards) by their number
     let grouped_cards = sorted_cards.into_iter()
         .filter(|c| !c.is_wildcard())
@@ -216,7 +220,7 @@ fn find_same_numbers(cards: &[Card]) -> Vec<Vec<&Card>> {
         }
 
     }
-    sets
+    sets.into_iter().collect()
 }
 
 pub fn valid_sets(cards: &[Card]) -> Vec<Vec<&Card>> {
@@ -224,4 +228,504 @@ pub fn valid_sets(cards: &[Card]) -> Vec<Vec<&Card>> {
     let mut same_numbers = find_same_numbers(cards);
     same_numbers.append(&mut runs);
     same_numbers
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    fn equals_vec<T>(ref_slice: &[&T], struct_slice: &[T]) -> bool
+        where T : std::cmp::PartialEq {
+            ref_slice.len() == struct_slice.len() &&
+                ref_slice.iter().all(|&c| struct_slice.contains(c))
+    }
+
+    #[test]
+    fn find_same_numbers_test() {
+        let test_tray = vec![
+            Card::new(2, Color::Blue),
+            Card::new(2, Color::Red),
+            Card::new(2, Color::Yellow),
+            Card::new(3, Color::Blue),
+            Card::new(3, Color::Blue),
+            Card::new(3, Color::Red),
+            Card::new(4, Color::Yellow),
+            Card::new(5, Color::Blue)
+        ];
+
+        let sets = find_same_numbers(&test_tray);
+        
+        let match_sets = vec![
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Red),
+                Card::new(2, Color::Yellow)
+            ]
+        ];
+        
+        assert!(sets.len() == match_sets.len());
+        for cur_match_set in match_sets {
+            assert!(sets.iter().any(|s| equals_vec(s, &cur_match_set)));
+        }
+    }
+
+    #[test]
+    fn find_same_numbers_with_wildcards_test() {
+        let test_tray = vec![
+            Card::new(2, Color::Blue),
+            Card::new(2, Color::Red),
+            Card::new(2, Color::Yellow),
+            Card::new(3, Color::Blue),
+            Card::new(3, Color::Blue),
+            Card::new(3, Color::Red),
+            Card::new(4, Color::Yellow),
+            Card::new(5, Color::Blue),
+            Card::Wildcard
+        ];
+
+        let sets = find_same_numbers(&test_tray);
+
+        let match_sets = vec![
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Red),
+                Card::new(2, Color::Yellow),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Red),
+                Card::new(2, Color::Yellow)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Red),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Yellow),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(2, Color::Red),
+                Card::new(2, Color::Yellow),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::new(3, Color::Red),
+                Card::Wildcard
+            ]
+        ];
+
+        assert!(sets.len() == match_sets.len());
+        for cur_match_set in match_sets {
+            assert!(sets.iter().any(|s| equals_vec(s, &cur_match_set)));
+        }
+        
+    }
+
+    #[test]
+    fn find_same_numbers_with_2_wildcards_test() {
+        let test_tray = vec![
+            Card::new(2, Color::Blue),
+            Card::new(2, Color::Red),
+            Card::new(2, Color::Yellow),
+            Card::Wildcard,
+            Card::Wildcard
+        ];
+
+        let sets = find_same_numbers(&test_tray);
+        
+        let match_sets = vec![
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Red),
+                Card::new(2, Color::Yellow)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Red),
+                Card::new(2, Color::Yellow),
+                Card::Wildcard
+            ],
+            
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Red),
+                Card::Wildcard
+            ],
+                        
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Yellow),
+                Card::Wildcard
+            ],
+                        
+            vec![
+                Card::new(2, Color::Red),
+                Card::new(2, Color::Yellow),
+                Card::Wildcard
+            ],
+                        
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Red),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+                        
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(2, Color::Yellow),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+                        
+            vec![
+                Card::new(2, Color::Red),
+                Card::new(2, Color::Yellow),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            
+            vec![
+                Card::new(2, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            
+            vec![
+                Card::new(2, Color::Red),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(2, Color::Yellow),
+                Card::Wildcard,
+                Card::Wildcard
+            ]
+        ];
+        
+        println!("{:?}", sets);
+        assert_eq!(sets.len(), match_sets.len());
+        for cur_match_set in match_sets {
+            assert!(sets.iter().any(|s| equals_vec(s, &cur_match_set)));
+        }
+    }
+
+    #[test]
+    fn find_same_numbers_with_2_wildcards_2_items_test() {
+        let test_tray = vec![
+            Card::new(3, Color::Blue),
+            Card::new(3, Color::Red),
+            Card::Wildcard,
+            Card::Wildcard
+        ];
+
+        let sets = find_same_numbers(&test_tray);
+        
+        let match_sets = vec![
+            vec![
+                Card::new(3, Color::Blue),
+                Card::new(3, Color::Red),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::new(3, Color::Red),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(3, Color::Red),
+                Card::Wildcard,
+                Card::Wildcard
+            ]
+        ];
+        
+        println!("{:?}", sets);
+        assert_eq!(sets.len(), match_sets.len());
+        for cur_match_set in match_sets {
+            assert!(sets.iter().any(|s| equals_vec(s, &cur_match_set)));
+        }
+    }
+
+    #[test]
+    fn find_same_numbers_with_2_wildcards_1_item_test() {
+        let test_tray = vec![
+            Card::new(3, Color::Blue),
+            Card::Wildcard,
+            Card::Wildcard
+        ];
+
+        let sets = find_same_numbers(&test_tray);
+        
+        let match_sets = vec![
+            vec![
+                Card::new(3, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard
+            ]
+        ];
+        
+        println!("{:?}", sets);
+        assert_eq!(sets.len(), match_sets.len());
+        for cur_match_set in match_sets {
+            assert!(sets.iter().any(|s| equals_vec(s, &cur_match_set)));
+        }
+    }
+
+    #[test]
+    fn find_runs_test() {
+        let test_tray = vec![
+            Card::new(2, Color::Blue),
+            Card::new(3, Color::Blue),
+            Card::new(4, Color::Blue),
+            Card::new(5, Color::Red),
+            Card::new(6, Color::Blue),
+            Card::new(7, Color::Blue)
+        ];
+
+        let sets = find_runs(&test_tray);
+        
+        let match_sets = vec![
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue),
+            ]
+        ];
+        
+        println!("{:?}", sets);
+        assert_eq!(sets.len(), match_sets.len());
+        for cur_match_set in match_sets {
+            assert!(sets.iter().any(|s| equals_vec(s, &cur_match_set)));
+        }
+    }
+
+    #[test]
+    fn find_runs_with_wildcards_test() {
+        let test_tray = vec![
+            Card::new(2, Color::Blue),
+            Card::new(3, Color::Blue),
+            Card::new(4, Color::Blue),
+            Card::new(5, Color::Red),
+            Card::new(6, Color::Blue),
+            Card::new(7, Color::Blue),
+            Card::Wildcard
+        ];
+
+        let sets = find_runs(&test_tray);
+        
+        let match_sets = vec![
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue),
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue),
+                Card::Wildcard,
+                Card::new(6, Color::Blue)
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue),
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue),
+                Card::Wildcard,
+                Card::new(6, Color::Blue)
+            ],
+            vec![
+                Card::new(4, Color::Blue),
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue)
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(4, Color::Blue),
+                Card::Wildcard,
+                Card::new(6, Color::Blue)
+            ],
+            vec![
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue)
+            ],
+            vec![
+                Card::Wildcard,
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::Wildcard
+            ],
+            vec![
+                Card::Wildcard,
+                Card::new(3, Color::Blue),
+                Card::new(4, Color::Blue)
+            ]
+
+        ];
+        
+        println!("{:?}", sets);
+        assert_eq!(sets.len(), match_sets.len());
+        for cur_match_set in match_sets {
+            assert!(sets.iter().any(|s| equals_vec(s, &cur_match_set)));
+        }
+    }
+
+    #[test]
+    fn find_runs_with_2_wildcards_test() {
+        let test_tray = vec![
+            Card::new(2, Color::Blue),
+            Card::new(3, Color::Blue),
+            Card::new(6, Color::Blue),
+            Card::new(7, Color::Blue),
+            Card::Wildcard,
+            Card::Wildcard
+        ];
+
+        let sets = find_runs(&test_tray);
+        
+        let match_sets = vec![
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue)
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard,
+                Card::new(6, Color::Blue)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard,
+                Card::new(6, Color::Blue)
+            ],
+            vec![
+                Card::Wildcard,
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue)
+            ],
+            vec![
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(3, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            vec![
+                Card::Wildcard,
+                Card::Wildcard,
+                Card::new(6, Color::Blue)
+            ],
+            vec![
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue)
+            ],
+            vec![
+                Card::Wildcard,
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue),
+                Card::Wildcard
+            ],
+            vec![
+                Card::Wildcard,
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue),
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            vec![
+                Card::Wildcard,
+                Card::new(2, Color::Blue),
+                Card::new(3, Color::Blue)
+            ],
+            vec![
+                Card::new(7, Color::Blue),
+                Card::Wildcard,
+                Card::Wildcard
+            ],
+            vec![
+                Card::new(6, Color::Blue),
+                Card::new(7, Color::Blue),
+                Card::Wildcard
+            ]
+        ];
+        
+        println!("{:?}", sets);
+        assert_eq!(sets.len(), match_sets.len());
+        for cur_match_set in match_sets {
+            assert!(sets.iter().any(|s| equals_vec(s, &cur_match_set)));
+        }
+    }
+
 }
